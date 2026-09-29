@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1D6FA3">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Sprinkler Pipe & Pump Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF1EE; --panel:#F8FAF8; --ink:#14262C; --muted:#56686D; --line:#C6D1CD;
+  --water:#1D6FA3; --static:#2F4858; --fric:#B8760E; --minor:#8A5A9E; --lat:#4E8A3E; --press:#1F8577; --margin:#8C9A9E;
+  --warn:#B23F28; --warnbg:#FBE9E4; --ok:#2B7A38; --okbg:#E4F2E6; --sel:#DCEBF5;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1A1E; --panel:#16252A; --ink:#E2EBE9; --muted:#95A7AA; --line:#2C3E43;
+    --water:#5AA7D8; --static:#8FB0C2; --fric:#E2A53C; --minor:#C08BD6; --lat:#86C174; --press:#4DC3B2; --margin:#6F7F83;
+    --warn:#F08068; --warnbg:#3A1F19; --ok:#72C77F; --okbg:#18301C; --sel:#1C3848;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1A1E; --panel:#16252A; --ink:#E2EBE9; --muted:#95A7AA; --line:#2C3E43;
+  --water:#5AA7D8; --static:#8FB0C2; --fric:#E2A53C; --minor:#C08BD6; --lat:#86C174; --press:#4DC3B2; --margin:#6F7F83;
+  --warn:#F08068; --warnbg:#3A1F19; --ok:#72C77F; --okbg:#18301C; --sel:#1C3848;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans Thai","Noto Sans Thai","Leelawadee UI",Tahoma,sans-serif;
+  font-size:16px;line-height:1.6;-webkit-text-size-adjust:100%;display:flex;flex-direction:column;overflow:hidden}
+header{flex:none;padding:10px 16px 0;max-width:720px;width:100%;margin:0 auto}
+header h1{font-size:1.1rem;line-height:1.3;margin:0;font-weight:700}
+nav.tabs{flex:none;display:flex;gap:2px;padding:8px 8px 0;max-width:720px;width:100%;margin:0 auto;border-bottom:1px solid var(--line)}
+nav.tabs button{flex:1;min-width:0;background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);
+  padding:4px 2px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;line-height:1.2}
+nav.tabs button i{font-style:normal;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  border:1.5px solid var(--line);font-weight:700;font-size:.8rem}
+nav.tabs button.done i{border-color:var(--water);color:var(--water)}
+nav.tabs button[aria-current="step"]{color:var(--ink);border-bottom-color:var(--water);font-weight:600}
+nav.tabs button[aria-current="step"] i{background:var(--water);border-color:var(--water);color:var(--panel)}
+nav.tabs button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+nav.tabs button:focus-visible{outline:3px solid var(--water);outline-offset:-3px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}
+.btn{border:1.5px solid var(--water);background:transparent;color:var(--water);padding:7px 14px;border-radius:999px;font-size:.9rem;font-weight:600}
+.btn.solid{background:var(--water);color:var(--panel)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible,summary:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+
+/* pipeline of steps */
+.slides{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
+  scroll-behavior:smooth;scrollbar-width:none;overscroll-behavior-x:contain}
+.slides::-webkit-scrollbar{display:none}
+.step{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;overscroll-behavior-y:contain}
+.inner{position:relative;max-width:720px;margin:0 auto;padding:18px 16px 28px 60px}
+.inner .num{left:16px;top:18px}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.num{position:absolute;left:0;top:0;width:34px;height:34px;border-radius:50%;background:var(--water);color:var(--panel);
+  display:grid;place-items:center;font-weight:700}
+.step h2{font-size:1.2rem;margin:2px 0 4px;line-height:1.3}
+.step .hint{color:var(--muted);font-size:.88rem;margin:0 0 12px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 12px}
+@media (min-width:560px){.grid.g3{grid-template-columns:1fr 1fr 1fr}}
+label.f{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:4px}
+label.f span.u{font-size:.78rem}
+input[type=number],select{font:inherit;font-size:1rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);
+  border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.seg{display:flex;border:1.5px solid var(--water);border-radius:999px;overflow:hidden;margin-bottom:12px}
+.seg label{flex:1;text-align:center;padding:7px 6px;font-size:.88rem;cursor:pointer;color:var(--water);font-weight:600}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--water);color:var(--panel)}
+.seg label:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:-3px}
+.readout{margin-top:12px;font-size:.95rem}
+.readout b{font-size:1.15rem}
+.check{display:flex;gap:8px;align-items:center;font-size:.95rem;margin:4px 0 10px}
+.check input{width:20px;height:20px;accent-color:var(--water)}
+details{margin-top:12px}
+summary{cursor:pointer;color:var(--water);font-weight:600;font-size:.92rem}
+.small{font-size:.82rem;color:var(--muted)}
+
+.tbl{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.86rem;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-weight:600;color:var(--muted);background:var(--paper);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:last-child td{border-bottom:none}
+tr.sel td{background:var(--sel);font-weight:600}
+tr.na td{color:var(--muted);opacity:.55;cursor:default}
+td .bad{color:var(--warn);font-weight:600}
+.tag{display:inline-block;font-size:.72rem;padding:0 6px;border-radius:4px;background:var(--ok);color:var(--panel);margin-left:4px;vertical-align:1px}
+.mode-note{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:.85rem;color:var(--muted)}
+.link{background:none;border:none;color:var(--water);text-decoration:underline;padding:0;font-size:.85rem}
+
+/* head stack */
+.tdh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0 12px}
+.tdh .big{font-size:2.6rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--water)}
+.tdh .lbl{color:var(--muted)}
+.stack{display:flex;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.stack div{height:100%;transition:width .3s ease}
+.legend{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:4px;font-size:.9rem;font-variant-numeric:tabular-nums}
+.legend li{display:flex;align-items:center;gap:8px}
+.legend i{width:12px;height:12px;border-radius:3px;flex:none}
+.legend .v{margin-left:auto;font-weight:600}
+.legend li.tot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.pw{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.pw div{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--paper)}
+.pw small{display:block;color:var(--muted);font-size:.8rem}
+.pw b{font-size:1.25rem;font-variant-numeric:tabular-nums}
+.pw .hl{border-color:var(--water);border-width:2px}
+.checks{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px}
+.checks li{padding:9px 12px;border-radius:8px;font-size:.9rem;line-height:1.5}
+.checks li.ok{background:var(--okbg);color:var(--ok)}
+.checks li.bad{background:var(--warnbg);color:var(--warn)}
+.checks li span{color:var(--ink)}
+svg text{fill:var(--muted);font-size:11px;font-family:inherit}
+.fig{display:block;width:100%;height:auto;margin:6px 0 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.fig text{font-size:10.5px}
+.fig .t{fill:var(--ink);font-weight:600;font-size:12px}
+.fig .dim{stroke:var(--muted);stroke-width:1;fill:none}
+.fig .gd{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;fill:none}
+.fig .spray{fill:none;stroke:var(--water);stroke-width:2;stroke-linecap:round;stroke-dasharray:.1 5}
+.fig .pipe{fill:none;stroke:var(--water);stroke-linecap:round;stroke-linejoin:round}
+.chart{width:100%;height:auto;margin-top:12px;display:block}
+.share{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--paper)}
+.share h3{margin:0 0 4px;font-size:1rem}
+.share p{margin:0 0 12px;font-size:.85rem;color:var(--muted)}
+.share-btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn-line{display:inline-flex;align-items:center;gap:8px;background:#06C755;color:#fff;border:none;border-radius:999px;
+  padding:9px 18px;font-weight:700;font-size:.95rem;text-decoration:none}
+.btn-line svg{width:20px;height:20px}
+.btn-line:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.share textarea{width:100%;min-height:220px;margin-top:10px;font:inherit;font-size:.82rem;line-height:1.5;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
+.chatbg{background:#8CABD9;border-radius:10px;padding:14px 12px;margin-top:10px}
+.bubble{background:#fff;color:#111;border-radius:14px;border-top-left-radius:4px;padding:10px 12px;max-width:92%;
+  white-space:pre-wrap;font-size:.84rem;line-height:1.5;font-family:-apple-system,"Helvetica Neue","Noto Sans Thai",sans-serif}
+.offscreen{position:absolute;left:-9999px;width:1px;height:1px}
+.toast{font-size:.85rem;color:var(--ok);margin-top:8px;min-height:1.2em}
+.op{margin-top:8px;font-size:.92rem}
+.formula{font-size:.85rem;color:var(--muted);line-height:1.7}
+.formula code{font-family:inherit;color:var(--ink);background:var(--paper);padding:1px 5px;border-radius:4px}
+
+.bar{flex:none;background:var(--ink);color:var(--paper);padding:8px 12px}
+.bar .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.bar .sum{text-align:center;line-height:1.3}
+.bar small{display:block;font-size:.75rem;opacity:.75}
+.bar b{font-size:1rem;font-variant-numeric:tabular-nums}
+.nav-btn{background:transparent;border:1.5px solid var(--paper);color:var(--paper);border-radius:999px;padding:7px 14px;font-size:.9rem;font-weight:600;min-width:92px}
+.nav-btn.next{background:var(--paper);color:var(--ink)}
+.nav-btn:disabled{opacity:.3;cursor:default}
+.nav-btn:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){.slides{scroll-behavior:auto}}
+@media (prefers-reduced-motion: reduce){.stack div{transition:none}}
+</style>
+</head>
+<body>
+<header><h1>Sprinkler Pipe Sizing & Pump Selection</h1></header>
+<nav class="tabs" id="tabs" aria-label="Steps">
+  <button data-go="0"><i>1</i><span>Flow</span></button>
+  <button data-go="1"><i>2</i><span>Main</span></button>
+  <button data-go="2"><i>3</i><span>Laterals</span></button>
+  <button data-go="3"><i>4</i><span>Elevation</span></button>
+  <button data-go="4"><i>5</i><span>Pump</span></button>
+  <button data-go="5"><i>6</i><span>Results</span></button>
+</nav>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
+<marker id="ahw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker>
+</defs></svg>
+<main class="slides" id="slides">
+
+<section class="step"><div class="inner">
+  <div class="num">1</div>
+  <h2>Required flow rate</h2>
+  <svg class="fig" viewBox="0 0 340 150" role="img" aria-label="Sprinkler heads running together on one pipe">
+<rect x="0" y="122" width="340" height="28" fill="var(--lat)" opacity=".15"/>
+<line x1="0" y1="122" x2="340" y2="122" stroke="var(--lat)" stroke-width="1.5"/>
+<line x1="24" y1="130" x2="322" y2="130" class="pipe" stroke-width="5"/>
+<line x1="4" y1="130" x2="22" y2="130" stroke="var(--ink)" stroke-width="1.5" marker-end="url(#ahw)"/>
+<line x1="80" y1="130" x2="80" y2="96" stroke="var(--ink)" stroke-width="3"/><rect x="74" y="88" width="12" height="9" rx="2" fill="var(--ink)"/><path class="spray" d="M80,90 Q52.400000000000006,40 34,124"/><path class="spray" d="M80,90 Q107.6,40 126,124"/><path class="spray" opacity=".55" d="M80,90 Q66.2,62 57.0,124"/><path class="spray" opacity=".55" d="M80,90 Q93.8,62 103.0,124"/><line x1="170" y1="130" x2="170" y2="96" stroke="var(--ink)" stroke-width="3"/><rect x="164" y="88" width="12" height="9" rx="2" fill="var(--ink)"/><path class="spray" d="M170,90 Q142.4,40 124,124"/><path class="spray" d="M170,90 Q197.6,40 216,124"/><path class="spray" opacity=".55" d="M170,90 Q156.2,62 147.0,124"/><path class="spray" opacity=".55" d="M170,90 Q183.8,62 193.0,124"/><line x1="260" y1="130" x2="260" y2="96" stroke="var(--ink)" stroke-width="3"/><rect x="254" y="88" width="12" height="9" rx="2" fill="var(--ink)"/><path class="spray" d="M260,90 Q232.4,40 214,124"/><path class="spray" d="M260,90 Q287.6,40 306,124"/><path class="spray" opacity=".55" d="M260,90 Q246.2,62 237.0,124"/><path class="spray" opacity=".55" d="M260,90 Q273.8,62 283.0,124"/>
+<text x="80" y="24" text-anchor="middle" class="t">q</text>
+<text x="170" y="24" text-anchor="middle" class="t">q</text>
+<text x="260" y="24" text-anchor="middle" class="t">q</text>
+<text x="330" y="24" text-anchor="end">× n heads</text>
+<text x="332" y="146" text-anchor="end">Q = q × n</text>
+</svg>
+  <div class="presets">
+    <button class="btn solid" id="loadPost">Try the example from the post</button>
+    <button class="btn" id="loadDefault">Default farm plot</button>
+  </div>
+  <p class="hint">Take flow and operating pressure from the sprinkler spec sheet. Count only the heads running at the same time in one zone.</p>
+  <div class="box">
+    <div class="seg" role="radiogroup" aria-label="Flow input method">
+      <label><input type="radio" name="mode" value="heads" checked>From sprinkler heads</label>
+      <label><input type="radio" name="mode" value="total">Enter total flow</label>
+    </div>
+    <div class="grid" id="headsFields">
+      <label class="f">Flow per head<input type="number" id="qHead" min="0" step="any"><span class="u">L/min</span></label>
+      <label class="f">Heads running at once<input type="number" id="nHeads" min="1" step="1"><span class="u">heads</span></label>
+    </div>
+    <div class="grid" id="totalFields" hidden>
+      <label class="f">Total flow<input type="number" id="qTotal" min="0" step="any"><span class="u">L/min</span></label>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <label class="f">Operating pressure at head<input type="number" id="paBar" min="0" step="any"><span class="u">bar (1 bar ≈ 10.2 m)</span></label>
+    </div>
+    <div class="readout" id="qOut"></div>
+  </div>
+</div></section>
+
+<section class="step"><div class="inner">
+  <div class="num">2</div>
+  <h2>Main line (pump to field)</h2>
+  <svg class="fig" viewBox="0 0 340 150" role="img" aria-label="Pump feeding the main line, with pipe cross-section">
+<rect x="14" y="116" width="78" height="6" fill="var(--ink)"/>
+<rect x="18" y="88" width="38" height="26" rx="4" fill="var(--static)"/>
+<rect x="56" y="97" width="6" height="8" fill="var(--fric)"/>
+<circle cx="74" cy="100" r="15" fill="var(--water)"/><circle cx="74" cy="100" r="5" fill="var(--panel)" opacity=".6"/>
+<path class="pipe" stroke-width="7" d="M74,86 V62 H326"/>
+<line x1="118" y1="58" x2="118" y2="46" stroke="var(--ink)" stroke-width="2"/>
+<circle cx="118" cy="36" r="11" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.5"/>
+<line x1="118" y1="36" x2="124" y2="30" stroke="var(--warn)" stroke-width="1.8"/>
+<line x1="160" y1="44" x2="222" y2="44" stroke="var(--ink)" stroke-width="1.5" marker-end="url(#ahw)"/>
+<text x="191" y="36" text-anchor="middle" class="t">v ≤ 1.5 m/s</text>
+<line class="dim" x1="84" y1="80" x2="224" y2="80" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text x="154" y="95" text-anchor="middle">L (main length)</text>
+<circle cx="282" cy="108" r="27" fill="var(--static)"/>
+<circle cx="282" cy="108" r="21" fill="var(--water)" opacity=".45"/>
+<line class="dim" x1="262" y1="108" x2="302" y2="108" marker-start="url(#ah)" marker-end="url(#ah)" style="stroke:var(--ink)"/>
+<text x="282" y="103" text-anchor="middle" class="t" style="font-size:10px">ID</text>
+<text x="316" y="138" text-anchor="middle">OD</text>
+<line class="gd" x1="282" y1="62" x2="282" y2="80"/>
+</svg>
+  <p class="hint">The smallest pipe that keeps velocity under your limit is picked automatically. Tap a row to choose a size yourself.</p>
+  <div class="box">
+    <div class="grid">
+      <label class="f">PVC pressure class
+        <select id="cls">
+          <option value="0">PVC 5 (5 bar)</option>
+          <option value="1">PVC 7 (7 bar)</option>
+          <option value="2">PVC 8.5 (8.5 bar)</option>
+          <option value="3">PVC 10.5 (10.5 bar)</option>
+          <option value="4">PVC 13.5 (13.5 bar)</option>
+        </select></label>
+      <label class="f">Main line length<input type="number" id="lMain" min="0" step="any"><span class="u">m</span></label>
+      <label class="f">C factor (pipe roughness)
+        <select id="cVal">
+          <option value="150">150 new PVC/PE</option>
+          <option value="140">140 PVC, typical</option>
+          <option value="130">130 old PVC</option>
+          <option value="120">120 galvanized steel</option>
+          <option value="100">100 old, rusty steel</option>
+        </select></label>
+      <label class="f">Max allowed velocity<input type="number" id="vMax" min="0.3" step="0.1"><span class="u">m/s (1.5 recommended)</span></label>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>Size</th><th>ID (mm)</th><th>v (m/s)</th><th>hf/100 m</th><th>hf total (m)</th></tr></thead>
+      <tbody id="mainTbl"></tbody>
+    </table></div>
+    <div class="mode-note"><span id="mainMode"></span><button class="link" id="mainAuto" hidden>Back to auto select</button></div>
+    <details>
+      <summary>Fittings and valves on the main (minor losses)</summary>
+      <div class="grid g3" style="margin-top:10px">
+        <label class="f">90° elbows<input type="number" id="n90" min="0" step="1"><span class="u">K 0.9</span></label>
+        <label class="f">45° elbows<input type="number" id="n45" min="0" step="1"><span class="u">K 0.4</span></label>
+        <label class="f">Tees (branch flow)<input type="number" id="nTee" min="0" step="1"><span class="u">K 1.8</span></label>
+        <label class="f">Gate valves (open)<input type="number" id="nGate" min="0" step="1"><span class="u">K 0.2</span></label>
+        <label class="f">Check valves<input type="number" id="nCheck" min="0" step="1"><span class="u">K 2.0</span></label>
+        <label class="f">Filter / other<input type="number" id="kOther" min="0" step="any"><span class="u">sum of K</span></label>
+      </div>
+      <p class="small">Minor loss = ΣK × v²/2g, using the main line velocity</p>
+    </details>
+  </div>
+</div></section>
+
+<section class="step"><div class="inner">
+  <div class="num">3</div>
+  <h2>Laterals carrying the sprinklers</h2>
+  <svg class="fig" viewBox="0 0 340 150" role="img" aria-label="Laterals branching from the main, pressure falling toward the last head">
+<line x1="30" y1="10" x2="30" y2="140" class="pipe" stroke-width="7"/>
+<line x1="30" y1="70" x2="316" y2="70" class="pipe" stroke-width="3.5"/>
+<line x1="30" y1="122" x2="316" y2="122" class="pipe" stroke-width="3.5"/>
+<line x1="84" y1="70" x2="84" y2="60" stroke="var(--ink)" stroke-width="2"/><circle cx="84" cy="58" r="3.5" fill="var(--ink)"/><line x1="140" y1="70" x2="140" y2="60" stroke="var(--ink)" stroke-width="2"/><circle cx="140" cy="58" r="3.5" fill="var(--ink)"/><line x1="196" y1="70" x2="196" y2="60" stroke="var(--ink)" stroke-width="2"/><circle cx="196" cy="58" r="3.5" fill="var(--ink)"/><line x1="252" y1="70" x2="252" y2="60" stroke="var(--ink)" stroke-width="2"/><circle cx="252" cy="58" r="3.5" fill="var(--ink)"/><line x1="308" y1="70" x2="308" y2="60" stroke="var(--ink)" stroke-width="2"/><circle cx="308" cy="58" r="3.5" fill="var(--ink)"/><line x1="84" y1="122" x2="84" y2="112" stroke="var(--ink)" stroke-width="2"/><circle cx="84" cy="110" r="3.5" fill="var(--ink)"/><line x1="140" y1="122" x2="140" y2="112" stroke="var(--ink)" stroke-width="2"/><circle cx="140" cy="110" r="3.5" fill="var(--ink)"/><line x1="196" y1="122" x2="196" y2="112" stroke="var(--ink)" stroke-width="2"/><circle cx="196" cy="110" r="3.5" fill="var(--ink)"/><line x1="252" y1="122" x2="252" y2="112" stroke="var(--ink)" stroke-width="2"/><circle cx="252" cy="110" r="3.5" fill="var(--ink)"/><line x1="308" y1="122" x2="308" y2="112" stroke="var(--ink)" stroke-width="2"/><circle cx="308" cy="110" r="3.5" fill="var(--ink)"/>
+<path d="M40,22 Q170,34 308,44" fill="none" stroke="var(--fric)" stroke-width="2" stroke-dasharray="5 4"/>
+<line class="gd" x1="40" y1="22" x2="326" y2="22"/>
+<line class="dim" x1="324" y1="23" x2="324" y2="43" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text x="170" y="16" text-anchor="middle" class="t" style="fill:var(--fric)">Pressure drop ≤ 20%</text>
+<text x="44" y="96">First head</text>
+<text x="312" y="96" text-anchor="end">Last head</text>
+<text x="36" y="146">Main</text>
+</svg>
+  <p class="hint">Design rule: pressure loss along a lateral should not exceed 20% of head operating pressure, so first and last heads differ in flow by no more than about 10%.</p>
+  <div class="box">
+    <label class="check"><input type="checkbox" id="latOn">Include laterals</label>
+    <div id="latBody">
+      <div class="grid">
+        <label class="f">Heads per lateral<input type="number" id="nLat" min="1" step="1"><span class="u">heads</span></label>
+        <label class="f">Lateral length<input type="number" id="lLat" min="0" step="any"><span class="u">m (from branch to last head)</span></label>
+      </div>
+      <div class="tbl"><table>
+        <thead><tr><th>Size</th><th>Inlet v</th><th>hf (m)</th><th>% of head pressure</th></tr></thead>
+        <tbody id="latTbl"></tbody>
+      </table></div>
+      <div class="mode-note"><span id="latMode"></span><button class="link" id="latAuto" hidden>Back to auto select</button></div>
+      <p class="small">Lateral hf is multiplied by the Christiansen factor (F) because water leaves one head at a time. Required pressure at lateral inlet = head pressure + ¾ hf</p>
+    </div>
+    <p class="small" id="latNeedHeads" hidden>Available when "From sprinkler heads" is selected in step 1</p>
+  </div>
+</div></section>
+
+<section class="step"><div class="inner">
+  <div class="num">4</div>
+  <h2>Elevation and suction</h2>
+  <svg class="fig" viewBox="0 0 340 150" role="img" aria-label="Water source, pump, and pipe climbing a hill to the highest sprinkler">
+<path d="M126,142 L292,44 L340,44 L340,142 Z" fill="var(--lat)" opacity=".2"/>
+<path d="M126,142 L292,44 L340,44" fill="none" stroke="var(--lat)" stroke-width="1.5"/>
+<rect x="0" y="118" width="96" height="24" fill="var(--water)" opacity=".3"/>
+<line x1="0" y1="118" x2="96" y2="118" stroke="var(--water)" stroke-width="1.5"/>
+<path class="pipe" stroke-width="4" d="M100,100 H66 V134"/>
+<rect x="60" y="132" width="12" height="7" rx="1.5" fill="var(--ink)"/>
+<rect x="96" y="108" width="44" height="5" fill="var(--ink)"/>
+<circle cx="108" cy="99" r="9" fill="var(--water)"/>
+<rect x="117" y="92" width="21" height="15" rx="2" fill="var(--static)"/>
+<path class="pipe" stroke-width="4" d="M108,90 V80 L296,34 H306"/>
+<line x1="306" y1="36" x2="306" y2="22" stroke="var(--ink)" stroke-width="3"/>
+<rect x="300" y="15" width="12" height="8" rx="2" fill="var(--ink)"/>
+<line class="gd" x1="96" y1="118" x2="334" y2="118"/>
+<line class="gd" x1="312" y1="18" x2="334" y2="18"/>
+<line class="dim" x1="330" y1="20" x2="330" y2="116" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text x="324" y="72" text-anchor="end" class="t">Static head</text>
+<line class="gd" x1="40" y1="99" x2="98" y2="99"/>
+<line class="dim" x1="44" y1="101" x2="44" y2="116" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text x="4" y="92">Suction lift</text>
+<text x="6" y="136" style="fill:var(--water)">Source</text>
+</svg>
+  <p class="hint">Static head is measured from the lowest water level in the source to the highest sprinkler (suction lift included).</p>
+  <div class="box">
+    <div class="grid">
+      <label class="f">Total static head<input type="number" id="hStatic" step="any"><span class="u">m</span></label>
+      <label class="f">Suction lift (pump above water)<input type="number" id="hSuc" step="any"><span class="u">m (negative = flooded suction)</span></label>
+      <label class="f">Suction pipe length<input type="number" id="lSuc" min="0" step="any"><span class="u">m</span></label>
+      <label class="f">Suction pipe size<select id="sucSize"></select></label>
+      <label class="f">Site elevation above sea level<input type="number" id="alt" min="0" step="any"><span class="u">m (higher = less suction capacity)</span></label>
+      <label class="f">NPSHr from pump catalog<input type="number" id="npshr" min="0" step="any"><span class="u">m (enter 0 if unknown)</span></label>
+    </div>
+    <label class="check" style="margin-top:12px"><input type="checkbox" id="foot">Foot valve with strainer at suction inlet (K 8)</label>
+    <div class="readout small" id="sucOut"></div>
+  </div>
+</div></section>
+
+<section class="step"><div class="inner">
+  <div class="num">5</div>
+  <h2>Pump and motor</h2>
+  <svg class="fig" viewBox="0 0 340 150" role="img" aria-label="Motor-driven centrifugal pump beside a pump curve and system curve">
+<rect x="18" y="114" width="162" height="7" fill="var(--ink)"/>
+<rect x="22" y="76" width="12" height="30" rx="3" fill="var(--ink)" opacity=".7"/>
+<rect x="34" y="70" width="80" height="42" rx="6" fill="var(--static)"/><line x1="46" y1="74" x2="46" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/><line x1="55" y1="74" x2="55" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/><line x1="64" y1="74" x2="64" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/><line x1="73" y1="74" x2="73" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/><line x1="82" y1="74" x2="82" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/><line x1="91" y1="74" x2="91" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/><line x1="100" y1="74" x2="100" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/><line x1="109" y1="74" x2="109" y2="106" stroke="var(--panel)" stroke-opacity=".35" stroke-width="1.5"/>
+<rect x="114" y="86" width="12" height="11" fill="var(--fric)"/>
+<circle cx="150" cy="92" r="23" fill="var(--water)"/><circle cx="150" cy="92" r="7" fill="var(--panel)" opacity=".55"/>
+<rect x="143" y="58" width="14" height="12" fill="var(--water)"/><rect x="138" y="54" width="24" height="5" fill="var(--ink)"/>
+<rect x="172" y="86" width="10" height="12" fill="var(--water)"/><rect x="181" y="82" width="5" height="20" fill="var(--ink)"/>
+<text x="74" y="136" text-anchor="middle">Motor</text><text x="150" y="136" text-anchor="middle">Pump</text>
+<line x1="212" y1="24" x2="212" y2="122" stroke="var(--ink)" stroke-width="1.2"/>
+<line x1="212" y1="122" x2="332" y2="122" stroke="var(--ink)" stroke-width="1.2"/>
+<path d="M212,40 Q282,48 327,110" fill="none" stroke="var(--fric)" stroke-width="2.5"/>
+<path d="M212,85 Q282,80 327,40" fill="none" stroke="var(--water)" stroke-width="2.5"/>
+<circle cx="284" cy="67.4" r="5" fill="var(--press)" stroke="var(--panel)" stroke-width="1.5"/>
+<text x="205" y="30" text-anchor="end" class="t">H</text><text x="332" y="138" text-anchor="end" class="t">Q</text>
+<text x="226" y="36" style="fill:var(--fric)">Pump</text><text x="226" y="100" style="fill:var(--water)">System</text>
+</svg>
+  <p class="hint">Small centrifugal pumps are typically 50–70% efficient. If you have the catalog curve, enter it below to find the real operating point.</p>
+  <div class="box">
+    <div class="grid g3">
+      <label class="f">Safety margin<input type="number" id="margin" min="0" step="1"><span class="u">% of TDH</span></label>
+      <label class="f">Pump efficiency<input type="number" id="eff" min="10" max="95" step="1"><span class="u">%</span></label>
+      <label class="f">Motor sizing factor<input type="number" id="sf" min="1" step="0.05"><span class="u">× (1.15 recommended)</span></label>
+    </div>
+    <details id="curveBox">
+      <summary>Enter 3 points from the pump curve</summary>
+      <p class="small" style="margin:8px 0">Read values from the Q-H curve of the pump model, e.g. shut-off, middle, and end of curve.</p>
+      <div class="grid">
+        <label class="f">Point 1: Q (L/min)<input type="number" id="c1q" min="0" step="any"></label>
+        <label class="f">Point 1: H (m)<input type="number" id="c1h" min="0" step="any"></label>
+        <label class="f">Point 2: Q (L/min)<input type="number" id="c2q" min="0" step="any"></label>
+        <label class="f">Point 2: H (m)<input type="number" id="c2h" min="0" step="any"></label>
+        <label class="f">Point 3: Q (L/min)<input type="number" id="c3q" min="0" step="any"></label>
+        <label class="f">Point 3: H (m)<input type="number" id="c3h" min="0" step="any"></label>
+      </div>
+    </details>
+  </div>
+</div></section>
+
+<section class="step"><div class="inner">
+  <div class="num">6</div>
+  <h2>Design results</h2>
+  <svg class="fig" viewBox="0 0 340 150" role="img" aria-label="Column showing how the total head is made up">
+<rect x="18" y="126" width="70" height="6" fill="var(--ink)"/>
+<rect x="22" y="104" width="30" height="20" rx="3" fill="var(--static)"/>
+<circle cx="66" cy="112" r="12" fill="var(--water)"/>
+<path class="pipe" stroke-width="5" d="M66,100 V80"/>
+<line x1="86" y1="130" x2="86" y2="16" stroke="var(--ink)" stroke-width="1.5" marker-start="url(#ahw)" marker-end="url(#ahw)"/>
+<text x="92" y="76" class="t">TDH</text>
+<text x="92" y="92" class="t" id="figTdh" style="fill:var(--water)"></text>
+<g id="figCol"></g>
+</svg>
+  <div class="box">
+    <div class="tdh"><span class="big" id="tdhBig">0</span><span class="lbl">m is the total dynamic head (TDH) the pump must deliver at <b id="tdhQ"></b></span></div>
+    <div class="stack" id="stack" aria-hidden="true"></div>
+    <ul class="legend" id="legend"></ul>
+    <div class="pw" id="pw"></div>
+    <div id="curveOut"></div>
+    <ul class="checks" id="checks"></ul>
+    <div class="share">
+      <h3>Share results</h3>
+      <p>Sends a text summary of the inputs, TDH, pump size and design checks.</p>
+      <div class="share-btns">
+        <a class="btn-line" id="shareLine" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 3C6.5 3 2 6.6 2 11c0 4 3.6 7.3 8.4 7.9.3.1.8.2.9.5.1.3.1.7 0 1l-.1.9c0 .3-.2 1 .9.5 1.1-.5 5.9-3.5 8-5.9C21.4 14.4 22 12.8 22 11c0-4.4-4.5-8-10-8z"/></svg>Share to LINE</a>
+        <button class="btn" id="shareMore" hidden>More apps</button>
+        <button class="btn" id="copyText">Copy text</button>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+      <details><summary>Preview message</summary><div class="chatbg"><div class="bubble" id="bubble"></div></div></details>
+      <textarea id="report" readonly tabindex="-1" aria-hidden="true" class="offscreen"></textarea>
+    </div>
+    <details>
+      <summary>Formulas used</summary>
+      <div class="formula">
+        <p>Pipe friction, Hazen-Williams: <code>hf = 10.67·L·Q^1.852 / (C^1.852·D^4.87)</code> (Q in m³/s, D = actual inside diameter in m)</p>
+        <p>Multiple-outlet lateral: <code>F = 1/(m+1) + 1/(2N) + √(m−1)/(6N²)</code> where m = 1.852</p>
+        <p>Total head: <code>TDH = static head + hf suction + hf main + ΣK·v²/2g + ¾ hf lateral + head pressure</code>, plus margin</p>
+        <p>Water power: <code>P = ρ·g·Q·H</code>. Shaft power = water power ÷ pump efficiency. 1 HP = 0.746 kW</p>
+        <p>NPSHa = atmospheric head (by site elevation) − vapor pressure at 30°C (0.43 m) − suction lift − suction losses</p>
+        <p>PVC sizes and wall thicknesses from Table 2 of Thai standard TIS 17-2561. All values are estimates for preliminary design; confirm against the actual pump curve before buying.</p>
+      </div>
+    </details>
+  </div>
+</div></section>
+</main>
+
+<div class="bar"><div class="in">
+  <button class="nav-btn" id="prev">‹ Back</button>
+  <div class="sum"><small id="bQ">–</small><b><span id="bH">–</span> / <span id="bP">–</span></b></div>
+  <button class="nav-btn next" id="next">Next ›</button>
+</div></div>
+
+<script>
+(function(){
+// TIS 17-2561 Table 2: [nominal size, inch, OD mm, wall PVC5,7,8.5,10.5,13.5]
+const PVC=[
+ [18,'½"',22,[null,1.5,2.0,2.3,2.6]],
+ [20,'¾"',26,[null,1.5,2.0,2.3,2.6]],
+ [25,'1"',34,[null,1.5,2.0,2.4,3.0]],
+ [35,'1¼"',42,[1.5,1.8,2.2,2.6,3.1]],
+ [40,'1½"',48,[1.5,1.9,2.3,2.8,3.5]],
+ [55,'2"',60,[1.8,2.4,2.9,3.5,4.3]],
+ [65,'2½"',76,[2.2,2.9,3.5,4.4,5.4]],
+ [80,'3"',89,[2.6,3.5,4.1,5.2,6.4]],
+ [100,'4"',114,[3.2,4.3,5.2,6.5,8.1]],
+ [125,'5"',140,[3.9,5.3,6.4,8.0,9.9]],
+ [150,'6"',165,[4.6,6.2,7.5,9.4,11.7]],
+ [200,'8"',216,[5.4,7.3,8.8,11.1,13.7]],
+ [250,'10"',267,[6.7,8.9,10.9,13.6,16.9]]
+];
+const CLS=[{n:'PVC 5',mpa:.51},{n:'PVC 7',mpa:.70},{n:'PVC 8.5',mpa:.85},{n:'PVC 10.5',mpa:1.08},{n:'PVC 13.5',mpa:1.36}];
+const HP=[0.5,0.75,1,1.5,2,3,4,5,5.5,7.5,10,15,20,25,30,40,50,60,75,100];
+const G=9.81, M=1.852;
+const $=id=>document.getElementById(id);
+const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:0};
+const f=(x,d=1)=>isFinite(x)?x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';
+const idOf=(i,ci)=>{const e=PVC[i][3][ci];return e==null?null:(PVC[i][2]-2*e)/1000};
+const hw=(L,Q,C,D)=>(Q<=0||!D)?0:10.67*L*Math.pow(Q,M)/(Math.pow(C,M)*Math.pow(D,4.87));
+const vel=(Q,D)=>D?Q/(Math.PI*D*D/4):0;
+const lbl=i=>PVC[i][1]+' ('+PVC[i][0]+')';
+
+const state={main:null,lat:null};
+
+const DEFAULTS={mode:'heads',qHead:25,nHeads:12,qTotal:300,paBar:2,cls:'2',lMain:150,cVal:'140',vMax:1.5,
+ n90:4,n45:0,nTee:2,nGate:1,nCheck:1,kOther:0,latOn:true,nLat:6,lLat:60,
+ hStatic:15,hSuc:3,lSuc:6,sucSize:'auto',alt:300,npshr:0,foot:true,margin:10,eff:60,sf:1.15,
+ c1q:'',c1h:'',c2q:'',c2h:'',c3q:'',c3h:'',main:null,lat:null};
+const POST={mode:'total',qHead:25,nHeads:12,qTotal:450,paBar:1.5,cls:'2',lMain:500,cVal:'140',vMax:1.5,
+ n90:0,n45:0,nTee:0,nGate:0,nCheck:0,kOther:0,latOn:false,nLat:6,lLat:60,
+ hStatic:100,hSuc:0,lSuc:0,sucSize:'auto',alt:0,npshr:0,foot:false,margin:0,eff:60,sf:1.15,
+ c1q:'',c1h:'',c2q:'',c2h:'',c3q:'',c3h:'',main:7,lat:null};
+const FIELDS=['qHead','nHeads','qTotal','paBar','cls','lMain','cVal','vMax','n90','n45','nTee','nGate','nCheck','kOther',
+ 'nLat','lLat','hStatic','hSuc','lSuc','sucSize','alt','npshr','margin','eff','sf','c1q','c1h','c2q','c2h','c3q','c3h'];
+
+function fillSuc(){
+  const s=$('sucSize');s.innerHTML='<option value="auto">Auto (one size larger than main)</option>'+
+    PVC.map((r,i)=>'<option value="'+i+'">'+lbl(i)+'</option>').join('');
+}
+function apply(p){
+  document.querySelector('input[name=mode][value='+p.mode+']').checked=true;
+  FIELDS.forEach(k=>{$(k).value=p[k]});
+  $('latOn').checked=p.latOn;$('foot').checked=p.foot;
+  state.main=p.main;state.lat=p.lat;
+  calc();
+}
+function save(){
+  try{
+    const o={mode:document.querySelector('input[name=mode]:checked').value,latOn:$('latOn').checked,foot:$('foot').checked,main:state.main,lat:state.lat};
+    FIELDS.forEach(k=>o[k]=$(k).value);
+    localStorage.setItem('sprinklerDesign',JSON.stringify(o));
+  }catch(e){}
+}
+function load(){
+  try{const s=localStorage.getItem('sprinklerDesign');if(s)return Object.assign({},DEFAULTS,JSON.parse(s));}catch(e){}
+  return DEFAULTS;
+}
+
+function pAtm(alt){return 10.33*Math.pow(1-2.25577e-5*alt,5.2559)}
+
+function calc(){
+  const mode=document.querySelector('input[name=mode]:checked').value;
+  $('headsFields').hidden=mode!=='heads';$('totalFields').hidden=mode!=='total';
+  const qHead=num('qHead'), nHeads=Math.max(1,Math.round(num('nHeads')));
+  const QL=mode==='heads'?qHead*nHeads:num('qTotal');
+  const Q=QL/60000;
+  const paBar=num('paBar'), paM=paBar*10.197;
+  $('qOut').innerHTML='Total flow <b>'+f(QL,0)+'</b> L/min = <b>'+f(Q*3600,1)+'</b> m³/h. Head pressure '+f(paM,1)+' m';
+
+  const ci=parseInt($('cls').value), C=num('cVal')||140, vmax=num('vMax')||1.5, L=num('lMain');
+
+  // main pipe table
+  let auto=null, rows='';
+  PVC.forEach((r,i)=>{
+    const D=idOf(i,ci);
+    if(!D){rows+='<tr class="na"><td>'+lbl(i)+'</td><td colspan="4">Not made in this class</td></tr>';return;}
+    const v=vel(Q,D);
+    if(auto===null && v<=vmax) auto=i;
+  });
+  if(auto===null){for(let i=PVC.length-1;i>=0;i--){if(idOf(i,ci)){auto=i;break;}}}
+  if(state.main!==null && !idOf(state.main,ci)) state.main=null;
+  const mi=state.main!==null?state.main:auto;
+  rows='';
+  PVC.forEach((r,i)=>{
+    const D=idOf(i,ci);
+    if(!D){rows+='<tr class="na"><td>'+lbl(i)+'</td><td colspan="4">Not made in this class</td></tr>';return;}
+    const v=vel(Q,D), h100=hw(100,Q,C,D), hL=hw(L,Q,C,D);
+    rows+='<tr tabindex="0" data-i="'+i+'" class="'+(i===mi?'sel':'')+'"><td>'+lbl(i)+(i===auto?'<span class="tag">Best</span>':'')+
+      '</td><td>'+f(D*1000,1)+'</td><td>'+(v>vmax?'<span class="bad">'+f(v,2)+'</span>':f(v,2))+'</td><td>'+f(h100,2)+'</td><td>'+f(hL,1)+'</td></tr>';
+  });
+  $('mainTbl').innerHTML=rows;
+  $('mainMode').textContent=state.main!==null?'Manual: '+lbl(mi):'Auto: '+lbl(mi);
+  $('mainAuto').hidden=state.main===null;
+  const Dm=idOf(mi,ci), vm=vel(Q,Dm), hfMain=hw(L,Q,C,Dm);
+  const sumK=num('n90')*0.9+num('n45')*0.4+num('nTee')*1.8+num('nGate')*0.2+num('nCheck')*2.0+num('kOther');
+  const minorMain=sumK*vm*vm/(2*G);
+
+  // lateral
+  const latOn=$('latOn').checked && mode==='heads';
+  $('latBody').hidden=!latOn; $('latNeedHeads').hidden=mode==='heads';
+  $('latOn').disabled=mode!=='heads';
+  let hfLat=0, latTerm=0, li=null, latQ=0, nLat=Math.max(1,Math.round(num('nLat')));
+  if(latOn){
+    latQ=nLat*qHead/60000;
+    const Fc=1/(M+1)+1/(2*nLat)+Math.sqrt(M-1)/(6*nLat*nLat);
+    const Ll=num('lLat');
+    let la=null; const res=[];
+    PVC.forEach((r,i)=>{
+      const D=idOf(i,ci); if(!D){res.push(null);return;}
+      const h=Fc*hw(Ll,latQ,C,D), v=vel(latQ,D);
+      res.push({D,h,v});
+      if(la===null && paM>0 && h<=0.2*paM && v<=vmax) la=i;
+    });
+    if(la===null){for(let i=PVC.length-1;i>=0;i--){if(res[i]){la=i;break;}}}
+    if(state.lat!==null && !res[state.lat]) state.lat=null;
+    li=state.lat!==null?state.lat:la;
+    let lr='';
+    res.forEach((x,i)=>{
+      if(!x){return;}
+      if(i>la+3 && i!==li) return;
+      const pct=paM>0?x.h/paM*100:0;
+      lr+='<tr tabindex="0" data-i="'+i+'" class="'+(i===li?'sel':'')+'"><td>'+lbl(i)+(i===la?'<span class="tag">Best</span>':'')+
+        '</td><td>'+(x.v>vmax?'<span class="bad">'+f(x.v,2)+'</span>':f(x.v,2))+'</td><td>'+f(x.h,2)+'</td><td>'+(pct>20?'<span class="bad">'+f(pct,0)+'%</span>':f(pct,0)+'%')+'</td></tr>';
+    });
+    $('latTbl').innerHTML=lr;
+    $('latMode').textContent=(state.lat!==null?'Manual: ':'Auto: ')+lbl(li)+', inlet flow '+f(latQ*60000,0)+' L/min, F = '+f(Fc,3);
+    $('latAuto').hidden=state.lat===null;
+    hfLat=res[li].h; latTerm=0.75*hfLat;
+  }
+
+  // suction
+  const sv=$('sucSize').value;
+  let si;
+  if(sv==='auto'){si=mi;for(let i=mi+1;i<PVC.length;i++){if(idOf(i,ci)){si=i;break;}}}else si=parseInt(sv);
+  const Ds=idOf(si,ci)||idOf(si,4)||Dm;
+  const vs=vel(Q,Ds), lSuc=num('lSuc'), hSuc=num('hSuc');
+  const hfSuc=hw(lSuc,Q,C,Ds);
+  const kSuc=$('foot').checked?8:0.5;
+  const minorSuc=lSuc>0||$('foot').checked?kSuc*vs*vs/(2*G):0;
+  $('sucOut').textContent='Suction '+lbl(si)+', velocity '+f(vs,2)+' m/s, loss '+f(hfSuc+minorSuc,2)+' m';
+
+  const hStatic=num('hStatic');
+  const parts=[
+    {n:'Static head',v:hStatic,c:'--static'},
+    {n:'Suction friction',v:hfSuc+minorSuc,c:'--water'},
+    {n:'Main line friction',v:hfMain,c:'--fric'},
+    {n:'Fittings and valves',v:minorMain,c:'--minor'},
+    {n:'Lateral (¾ hf)',v:latTerm,c:'--lat'},
+    {n:'Pressure at sprinkler',v:paM,c:'--press'}
+  ];
+  const Hsum=parts.reduce((a,p)=>a+p.v,0);
+  const mg=Hsum*num('margin')/100;
+  parts.push({n:'Safety margin '+f(num('margin'),0)+'%',v:mg,c:'--margin'});
+  const TDH=Hsum+mg;
+
+  $('tdhBig').textContent=f(TDH,1);
+  $('tdhQ').textContent=f(QL,0)+' L/min';
+  const pos=parts.filter(p=>p.v>0.0001);
+  $('stack').innerHTML=pos.map(p=>'<div style="width:'+(p.v/TDH*100)+'%;background:var('+p.c+')" title="'+p.n+'"></div>').join('');
+  (function(){
+    const top=14,bot=132,x=140,w=36;let y=bot,g='';
+    pos.forEach(p=>{const h=(bot-top)*p.v/TDH;y-=h;
+      g+='<rect x="'+x+'" y="'+y.toFixed(1)+'" width="'+w+'" height="'+Math.max(h,0.5).toFixed(1)+'" fill="var('+p.c+')" stroke="var(--panel)" stroke-width="1"/>';
+      if(h>=11) g+='<line class="gd" x1="'+(x+w+2)+'" y1="'+(y+h/2).toFixed(1)+'" x2="'+(x+w+12)+'" y2="'+(y+h/2).toFixed(1)+'"/><text x="'+(x+w+15)+'" y="'+(y+h/2+3.5).toFixed(1)+'">'+p.n+' '+f(p.v,1)+' m</text>';
+    });
+    $('figCol').innerHTML=g;$('figTdh').textContent=f(TDH,1)+' m';
+  })();
+  $('legend').innerHTML=parts.filter(p=>Math.abs(p.v)>0.0001).map(p=>'<li><i style="background:var('+p.c+')"></i>'+p.n+'<span class="v">'+f(p.v,1)+' m</span></li>').join('')+
+    '<li class="tot"><i style="background:transparent"></i><b>Total TDH</b><span class="v">'+f(TDH,1)+' m</span></li>';
+
+  // power
+  const eff=Math.min(95,Math.max(10,num('eff')||60))/100, sf=num('sf')||1.15;
+  const pHyd=1000*G*Q*TDH/1000; // kW
+  const pShaft=pHyd/eff, pMotor=pShaft*sf, hpNeed=pMotor/0.746;
+  const hpStd=HP.find(h=>h>=hpNeed-1e-9)||Math.ceil(hpNeed);
+  $('pw').innerHTML=
+    '<div><small>Water power</small><b>'+f(pHyd,2)+'</b> kW</div>'+
+    '<div><small>Pump shaft power</small><b>'+f(pShaft,2)+'</b> kW</div>'+
+    '<div><small>Motor power needed</small><b>'+f(hpNeed,2)+'</b> HP</div>'+
+    '<div class="hl"><small>Recommended standard motor</small><b>'+String(hpStd)+'</b> HP ('+f(hpStd*0.746,2)+' kW)</div>';
+
+  // pump curve
+  const pts=[[num('c1q'),num('c1h')],[num('c2q'),num('c2h')],[num('c3q'),num('c3h')]];
+  const hasCurve=['c1q','c1h','c2q','c2h','c3q','c3h'].every(k=>$(k).value!=='') && new Set(pts.map(p=>p[0])).size===3;
+  const fricDesign=Hsum-hStatic-paM;
+  const sys=q=>hStatic+paM+(QL>0?fricDesign*Math.pow(q/QL,M):0);
+  let op=null, shut=null;
+  if(hasCurve){
+    const pump=q=>{let s=0;for(let i=0;i<3;i++){let t=pts[i][1];for(let j=0;j<3;j++)if(j!==i)t*=(q-pts[j][0])/(pts[i][0]-pts[j][0]);s+=t;}return s;};
+    shut=pump(0);
+    const qmax=Math.max(...pts.map(p=>p[0]))*1.3;
+    let a=0,b=qmax;
+    if(pump(a)-sys(a)>0 && pump(b)-sys(b)<0){
+      for(let k=0;k<60;k++){const m=(a+b)/2;(pump(m)-sys(m)>0)?a=m:b=m;}
+      op={q:(a+b)/2,h:pump((a+b)/2)};
+    }
+    // chart
+    const W=340,Hh=210,pl=40,pb=28,pt=10,pr=10;
+    const xmax=Math.max(qmax,QL*1.2), ymax=Math.max(shut,sys(xmax),TDH)*1.1;
+    const X=q=>pl+(W-pl-pr)*q/xmax, Y=h=>Hh-pb-(Hh-pb-pt)*h/ymax;
+    let sp='',pp='';
+    for(let k=0;k<=40;k++){const q=xmax*k/40;sp+=(k?'L':'M')+X(q).toFixed(1)+','+Y(sys(q)).toFixed(1);}
+    for(let k=0;k<=40;k++){const q=Math.max(...pts.map(p=>p[0]))*1.1*k/40;const h=pump(q);if(h<0)break;pp+=(pp?'L':'M')+X(q).toFixed(1)+','+Y(h).toFixed(1);}
+    let ticks='';
+    for(let k=0;k<=4;k++){const q=xmax*k/4,h=ymax*k/4;
+      ticks+='<text x="'+X(q)+'" y="'+(Hh-8)+'" text-anchor="middle">'+f(q,0)+'</text>';
+      ticks+='<text x="'+(pl-5)+'" y="'+(Y(h)+4)+'" text-anchor="end">'+f(h,0)+'</text>';
+      ticks+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(h)+'" y2="'+Y(h)+'" stroke="var(--line)" stroke-width="1"/>';}
+    const svg='<svg class="chart" viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="Pump curve vs system curve">'+ticks+
+      '<path d="'+sp+'" fill="none" stroke="var(--water)" stroke-width="2.5"/>'+
+      '<path d="'+pp+'" fill="none" stroke="var(--fric)" stroke-width="2.5"/>'+
+      '<circle cx="'+X(QL)+'" cy="'+Y(TDH)+'" r="5" fill="none" stroke="var(--ink)" stroke-width="2"/>'+
+      (op?'<circle cx="'+X(op.q)+'" cy="'+Y(op.h)+'" r="5" fill="var(--press)"/>':'')+
+      '</svg>';
+    $('curveOut').innerHTML='<div class="small" style="margin-top:14px">Blue = system curve, orange = pump curve, hollow circle = design point, green dot = actual operating point (x: L/min, y: m)</div>'+svg+
+      '<div class="op">'+(op?'This pump will run at <b>'+f(op.q,0)+' L/min</b> and <b>'+f(op.h,1)+' m</b>':'The pump and system curves do not cross. This pump cannot reach the system, or the points entered do not cover the range')+'</div>';
+  } else $('curveOut').innerHTML='';
+
+  // checks
+  const C_=[];
+  const CT=[];
+  const add=(ok,t,sh)=>(CT.push({ok,t:sh||t}),C_.push('<li class="'+(ok?'ok':'bad')+'">'+(ok?'✓ ':'⚠ ')+'<span>'+t+'</span></li>'));
+  add(vm<=vmax,'Main line velocity '+f(vm,2)+' m/s '+(vm<=vmax?'is within limits':'exceeds '+f(vmax,1)+' m/s. Risk of water hammer and high energy loss. Use a larger pipe'),
+    'Main pipe velocity '+f(vm,2)+' m/s'+(vm<=vmax?'':'\n   → too fast, use a larger pipe'));
+  if(latOn){const pct=paM>0?hfLat/paM*100:0;add(pct<=20,'Lateral pressure loss is '+f(pct,0)+'% of head pressure. '+(pct<=20?'Within 20%, heads will discharge evenly':'Over 20%, the last heads will deliver less than the first. Use a larger lateral or fewer heads per lateral'),
+    'Lateral pressure loss '+f(pct,0)+'% (limit 20%)'+(pct<=20?'':'\n   → larger lateral or fewer heads'));}
+  add(vs<=1.5,'Suction velocity '+f(vs,2)+' m/s '+(vs<=1.5?'is within limits':'exceeds 1.5 m/s. Use a larger suction pipe'),
+    'Suction velocity '+f(vs,2)+' m/s'+(vs<=1.5?'':'\n   → use a larger suction pipe'));
+  const npsha=pAtm(num('alt'))-0.43-hSuc-hfSuc-minorSuc;
+  const npshr=num('npshr');
+  if(npshr>0) add(npsha>=npshr+0.5,'NPSHa '+f(npsha,1)+' m vs NPSHr '+f(npshr,1)+' m. '+(npsha>=npshr+0.5?'No cavitation expected':'Not enough (should exceed NPSHr by at least 0.5 m). Reduce suction lift or enlarge the suction pipe'),
+    'NPSHa '+f(npsha,1)+' m vs NPSHr '+f(npshr,1)+' m'+(npsha>=npshr+0.5?'':'\n   → cavitation risk, reduce suction lift'));
+  else add(npsha>=4,'NPSHa '+f(npsha,1)+' m. '+(npsha>=4?'Comfortable for a typical centrifugal pump':'Fairly low. Check NPSHr in the catalog or reduce suction lift'),
+    'Suction (NPSHa) '+f(npsha,1)+' m'+(npsha>=4?'':'\n   → low, check pump NPSHr'));
+  // pressure class
+  const rating=CLS[ci].mpa*101.97;
+  const shutEst=(hasCurve&&shut>0?shut:1.25*TDH)-hSuc;
+  const needCls=CLS.findIndex(c=>c.mpa*101.97>=shutEst);
+  add(shutEst<=rating,'Max pressure at the start of the main (valve closed'+(hasCurve?', from pump curve':', est. 1.25×TDH')+') ≈ '+f(shutEst,0)+' m ('+f(shutEst/10.197,1)+' bar) vs '+CLS[ci].n+' rated '+f(rating,0)+' m. '+
+    (shutEst<=rating?'Safe':(needCls>=0?'Pipe may burst. Use '+CLS[needCls].n+' or higher':'Exceeds every PVC class. Use steel or high-pressure HDPE, or split pumping into 2 stages with a break tank')),
+    'Pipe pressure '+f(shutEst/10.197,1)+' bar (rated '+f(CLS[ci].mpa*10,1)+' bar)'+(shutEst<=rating?'':(needCls>=0?'\n   → pipe may burst, use '+CLS[needCls].n:'\n   → exceeds all PVC, use steel/HDPE or 2-stage pumping')));
+  if(hasCurve){
+    if(op) add(op.q>=QL*0.95,'Pump operating point is '+f(op.q,0)+' L/min. '+(op.q>=QL*0.95?'Meets the design flow of '+f(QL,0)+' L/min':'Below the design flow of '+f(QL,0)+' L/min. Choose a larger pump'),
+    'Pump delivers '+f(op.q,0)+' of '+f(QL,0)+' L/min'+(op.q>=QL*0.95?'':'\n   → choose a larger pump'));
+    else add(false,'The pump in the curve cannot supply this system');
+  }
+  $('checks').innerHTML=C_.join('');
+
+  // ---- text report for sharing ----
+  const HR='━━━━━━━━━━━━━━';
+  const nBad=CT.filter(c=>!c.ok).length;
+  const vis=parts.filter(p=>Math.abs(p.v)>0.0001);
+  const bar=v=>{const n=Math.max(1,Math.round(v/TDH*10));return '▰'.repeat(n)+'▱'.repeat(10-n);};
+  const R=[
+    '💧 SPRINKLER PUMP DESIGN',
+    '📅 '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),
+    HR,
+    '🎯 SUMMARY',
+    '▸ TDH:  '+f(TDH,1)+' m',
+    '▸ Flow:  '+f(QL,0)+' L/min ('+f(Q*3600,1)+' m³/h)',
+    '▸ Motor:  '+hpStd+' HP ('+f(hpStd*0.746,2)+' kW)',
+    '▸ Main pipe:  '+PVC[mi][1]+' '+CLS[ci].n,
+    nBad?'⚠️ '+nBad+' warning'+(nBad>1?'s':'')+', see Checks':'✅ All checks passed',
+    HR,
+    '🚿 SPRINKLERS',
+    mode==='heads'?'• '+nHeads+' heads × '+f(qHead,1)+' L/min':'• Total flow '+f(QL,0)+' L/min',
+    '• Pressure at head: '+f(paBar,2)+' bar',
+    HR,
+    '🔧 PIPES  ('+CLS[ci].n+', C '+C+')',
+    '• Main: '+lbl(mi)+', '+f(L,0)+' m',
+    '   v '+f(vm,2)+' m/s, loss '+f(hfMain,1)+' m'
+  ];
+  if(latOn) R.push('• Lateral: '+lbl(li)+', '+f(num('lLat'),0)+' m, '+nLat+' heads','   loss '+f(hfLat,2)+' m ('+f(paM>0?hfLat/paM*100:0,0)+'%)');
+  if(lSuc>0) R.push('• Suction: '+lbl(si)+', '+f(lSuc,0)+' m','   v '+f(vs,2)+' m/s, lift '+f(hSuc,1)+' m');
+  R.push(HR,'📊 HEAD BREAKDOWN');
+  vis.forEach(p=>R.push('• '+p.n+': '+f(p.v,1)+' m','   '+bar(p.v)+' '+f(p.v/TDH*100,0)+'%'));
+  R.push('= TDH '+f(TDH,1)+' m');
+  R.push(HR,'⚙️ PUMP & MOTOR',
+    '• Water power: '+f(pHyd,2)+' kW',
+    '• Shaft power: '+f(pShaft,2)+' kW (eff. '+f(eff*100,0)+'%)',
+    '• Motor: '+hpStd+' HP (× '+f(sf,2)+')');
+  if(hasCurve&&op) R.push('• Pump curve point: '+f(op.q,0)+' L/min @ '+f(op.h,1)+' m');
+  R.push(HR,'✔️ CHECKS');
+  CT.forEach(c=>R.push((c.ok?'✅ ':'⚠️ ')+c.t));
+  R.push(HR,'ℹ️ Preliminary estimate. Confirm with the actual pump curve before buying.');
+  const txt=R.join('\n');
+  $('report').value=txt;
+  $('bubble').textContent=txt;
+  $('shareLine').href='https://line.me/R/share?text='+encodeURIComponent(txt);
+
+  $('bQ').textContent='Q '+f(QL,0)+' L/min';
+  $('bH').textContent=f(TDH,1)+' m';
+  $('bP').textContent=String(hpStd)+' HP';
+  save();
+}
+
+fillSuc();
+document.addEventListener('input',e=>{if(e.target.closest('.box'))calc();});
+document.addEventListener('change',e=>{if(e.target.closest('.box'))calc();});
+function rowPick(tb,key){
+  const h=e=>{const tr=e.target.closest('tr[data-i]');if(!tr)return;state[key]=parseInt(tr.dataset.i);calc();};
+  $(tb).addEventListener('click',h);
+  $(tb).addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();h(e);}});
+}
+rowPick('mainTbl','main');rowPick('latTbl','lat');
+$('mainAuto').onclick=()=>{state.main=null;calc();};
+$('latAuto').onclick=()=>{state.lat=null;calc();};
+// step navigation
+const slides=$('slides'), tabs=[...document.querySelectorAll('#tabs button')], N=tabs.length;
+let cur=0;
+function go(i){i=Math.max(0,Math.min(N-1,i));slides.scrollTo({left:i*slides.clientWidth});setCur(i);}
+function setCur(i){
+  cur=i;
+  tabs.forEach((t,k)=>{if(k===i)t.setAttribute('aria-current','step');else t.removeAttribute('aria-current');t.classList.toggle('done',k<i);});
+  $('prev').disabled=i===0;
+  $('next').textContent=i===N-1?'‹ Back to step 1':'Next ›';
+  try{localStorage.setItem('sprinklerStep',i)}catch(e){}
+}
+let st;
+slides.addEventListener('scroll',()=>{clearTimeout(st);st=setTimeout(()=>{const i=Math.round(slides.scrollLeft/slides.clientWidth);if(i!==cur)setCur(i);},60);},{passive:true});
+tabs.forEach((t,k)=>t.onclick=()=>go(k));
+$('prev').onclick=()=>go(cur-1);
+$('next').onclick=()=>go(cur===N-1?0:cur+1);
+window.addEventListener('resize',()=>{slides.style.scrollBehavior='auto';slides.scrollLeft=cur*slides.clientWidth;slides.style.scrollBehavior='';});
+document.addEventListener('keydown',e=>{if(e.target.matches('input,select'))return;if(e.key==='ArrowRight')go(cur+1);if(e.key==='ArrowLeft')go(cur-1);});
+$('loadPost').onclick=()=>{apply(POST);go(N-1);};
+// sharing
+const toast=m=>{$('toast').textContent=m;clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').textContent='',2500);};
+if(navigator.share){$('shareMore').hidden=false;
+  $('shareMore').onclick=async()=>{try{await navigator.share({title:'Sprinkler Pump Design',text:$('report').value});}catch(e){if(e&&e.name!=='AbortError')toast('Sharing is not available here. Use Copy text instead.');}};}
+$('copyText').onclick=async()=>{
+  const t=$('report').value;
+  try{await navigator.clipboard.writeText(t);toast('Copied. Paste it into any LINE chat.');}
+  catch(e){const el=$('report');el.focus();el.select();
+    try{document.execCommand('copy')?toast('Copied. Paste it into any LINE chat.'):toast('Text selected. Tap Copy to finish.');}catch(_){toast('Text selected. Tap Copy to finish.');}}
+};
+$('loadDefault').onclick=()=>{apply(DEFAULTS);go(0);};
+apply(load());
+let s0=0;try{s0=parseInt(localStorage.getItem('sprinklerStep'))||0}catch(e){}
+requestAnimationFrame(()=>{slides.style.scrollBehavior='auto';slides.scrollLeft=s0*slides.clientWidth;slides.style.scrollBehavior='';setCur(s0);});
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+</script>
+</body>
+</html>
